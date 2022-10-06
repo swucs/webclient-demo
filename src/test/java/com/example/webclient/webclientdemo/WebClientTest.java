@@ -12,14 +12,13 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.net.http.HttpResponse;
 import java.util.concurrent.CountDownLatch;
 
 public class WebClientTest {
 
     static final int TOTAL_CALL_COUNT = 10;
-//    static final String URL = "https://doksa.angryant.kr/";
-    static final String URL = "http://localhost:8088/api/users";
+    static final String URL = "https://doksa.angryant.kr/";
+//    static final String URL = "http://localhost:8088/api/users";
 
     WebClient webClient() {
         return new WebClientConfig().webClient();
@@ -39,33 +38,16 @@ public class WebClientTest {
 
             webClient().get()
                     .uri(URL)
-
-                    .exchangeToMono(response -> {
-                        return response.bodyToMono(String.class)
-                                .map(body -> {
-
-                                    int statusCode;
-                                    if (response.statusCode().is2xxSuccessful()) {
-                                        statusCode = 200;
-                                    } else if (response.statusCode().is3xxRedirection()) {
-                                        statusCode = 300;
-                                    } else if (response.statusCode().is4xxClientError()) {
-                                        statusCode = 400;
-                                    } else if (response.statusCode().is5xxServerError()) {
-                                        statusCode = 500;
-                                    } else {
-                                        statusCode = 500;
-                                    }
-
-                                    return WebClientResponse.builder()
-                                            .statusCode(statusCode)
-                                            .body(body)
-                                            ;
-                                });
-                    })
+                    .exchangeToMono(response ->
+                            response.bodyToMono(String.class)
+                            .map(body -> WebClientResponse.builder()
+                                    .statusSeries(response.statusCode().series())
+                                    .body(body)
+                            )
+                    )
                     .onErrorResume(e ->
                         Mono.just(WebClientResponse.builder()
-                                .statusCode(500)
+                                .statusSeries(HttpStatus.Series.SERVER_ERROR)
                                 .body(null))
                     )
                     .doOnTerminate(() -> countDownLatch.countDown())
@@ -107,7 +89,6 @@ public class WebClientTest {
         System.out.println("prettyPrint : " + stopWatch.prettyPrint());
 
     }
-
 
     public RestTemplate restTemplate() {
         return new RestTemplateBuilder().build();
