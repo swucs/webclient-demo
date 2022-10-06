@@ -2,14 +2,20 @@ package com.example.webclient.webclientdemo;
 
 import com.example.webclient.webclientdemo.config.WebClientConfig;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.StopWatch;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.util.concurrent.CountDownLatch;
 
 public class WebClientTest {
+
+    final int TOTAL_CALL_COUNT = 100;
 
     WebClient webClient() {
         return new WebClientConfig().webClient();
@@ -18,12 +24,12 @@ public class WebClientTest {
     @Test
     void callWebClient() throws Exception {
 
-        CountDownLatch countDownLatch = new CountDownLatch(10);
+        CountDownLatch countDownLatch = new CountDownLatch(TOTAL_CALL_COUNT);
         StopWatch stopWatch = new StopWatch();
 
         stopWatch.start();
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < TOTAL_CALL_COUNT; i++) {
 
             final int index = i;
 
@@ -52,10 +58,41 @@ public class WebClientTest {
         }
 
         stopWatch.stop();
-        System.out.println(stopWatch.shortSummary());
-        System.out.println(stopWatch.getTotalTimeMillis());
-        System.out.println(stopWatch.prettyPrint());
+        System.out.println("shortSummary : " + stopWatch.shortSummary());
+        System.out.println("소요시간(초) : " + stopWatch.getTotalTimeMillis() / 1000.0d);
+        System.out.println("prettyPrint : " + stopWatch.prettyPrint());
 
+    }
+
+
+    public RestTemplate restTemplate() {
+        return new RestTemplateBuilder().build();
+    }
+
+    @Test
+    void callRest() {
+
+        StopWatch stopWatch = new StopWatch();
+
+        stopWatch.start();
+
+        for (int i = 0; i < TOTAL_CALL_COUNT; i++) {
+            try {
+                ResponseEntity<String> response = restTemplate().exchange("http://localhost:8088/api/users", HttpMethod.GET, null, String.class);
+                if (response.getStatusCode() == HttpStatus.OK) {
+                    String body = response.getBody();
+                    System.out.println("onStatus " + i + "= " + response.getStatusCode());
+                    System.out.println("body = " + body);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        stopWatch.stop();
+        System.out.println("shortSummary : " + stopWatch.shortSummary());
+        System.out.println("소요시간(초) : " + stopWatch.getTotalTimeMillis() / 1000.0d);
+        System.out.println("prettyPrint : " + stopWatch.prettyPrint());
     }
 
 }
