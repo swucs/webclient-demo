@@ -2,15 +2,21 @@ package com.example.webclient.webclientdemo;
 
 import com.example.webclient.webclientdemo.config.WebClientConfig;
 import com.example.webclient.webclientdemo.model.WebClientResponse;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.util.StopWatch;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.tcp.TcpClient;
 
 import java.util.concurrent.CountDownLatch;
 
@@ -22,6 +28,20 @@ public class WebClientTest {
 
     WebClient webClient() {
         return new WebClientConfig().webClient();
+    }
+    
+    
+    @Test
+    void test() throws Exception {
+        SslContext sslContext = SslContextBuilder
+                .forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .build();
+
+
+        TcpClient tcpClient = TcpClient.create().secure(sslProviderBuilder -> sslProviderBuilder.sslContext(sslContext));
+        HttpClient httpClient = HttpClient.from(tcpClient);
+        WebClient webClient = WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
     }
 
     @Test
